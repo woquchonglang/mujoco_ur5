@@ -51,6 +51,12 @@ public:
     return Matrix<Rows, Cols>(eigen_mat_ * other.eigen_mat_);
   }
 
+  Matrix<Rows, Cols> operator+(const Matrix<Rows, Cols> &_mat) const {
+    Matrix<Rows, Cols> res;
+    res.eigen_mat_ = this->eigen_mat_ + _mat.eigen_mat_;
+    return res;
+  }
+
   Matrix<Rows, Cols> operator-(const Matrix<Rows, Cols> &_mat) const {
     Matrix<Rows, Cols> res;
     res.eigen_mat_ = this->eigen_mat_ - _mat.eigen_mat_;
