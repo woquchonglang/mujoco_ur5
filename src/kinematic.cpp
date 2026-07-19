@@ -412,11 +412,11 @@ Joint Kinematic::ikine(const Matrix<4, 4> &_t, const array<float, 6> &_pose) {
       return target;
     }
 
-    const float y = fmod(target[i], 2.0 * M_PI);
-    if (y > M_PI) {
-      target[i] = y - 2.0 * M_PI;
-    } else if (y < -M_PI) {
-      target[i] = y + 2.0 * M_PI;
+    target[i] = fmod(target[i], 2.0 * M_PI);
+    if (target[i] > M_PI) {
+      target[i] = target[i] - 2.0 * M_PI;
+    } else if (target[i] < -M_PI) {
+      target[i] = target[i] + 2.0 * M_PI;
     }
   }
 
