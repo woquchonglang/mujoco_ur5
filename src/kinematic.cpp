@@ -24,6 +24,17 @@ Joint operator-(const Joint &_joint1, const Joint &_joint2) {
   return result;
 }
 
+Pose_s operator-(const Pose_s &_p1, const Pose_s &_p2) {
+  Pose_s result;
+  result.rpy.roll = _p1.rpy.roll - _p2.rpy.roll;
+  result.rpy.pitch = _p1.rpy.pitch - _p2.rpy.pitch;
+  result.rpy.yaw = _p1.rpy.yaw - _p2.rpy.yaw;
+  result.xyz.x = _p1.xyz.x - _p2.xyz.x;
+  result.xyz.y = _p1.xyz.y - _p2.xyz.y;
+  result.xyz.z = _p1.xyz.z - _p2.xyz.z;
+  return result;
+}
+
 Kinematic::Kinematic()
     : dh({{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}}, // theta
          {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0}}, // a
@@ -414,6 +425,7 @@ Joint Kinematic::ikine(const Matrix<4, 4> &_t, const array<float, 6> &_pose) {
 }
 
 Joint Kinematic::ikinePose(const array<float, 3> &_xyz,
+                           const array<float, 3> &_rpy,
                            const std::array<float, 3> &_rpy,
                            const array<float, 6> &_pose) {
   auto rot = euler2Rotation(_rpy);
@@ -425,4 +437,36 @@ array<float, 6> Kinematic::ikineWithTcp(const Matrix<4, 4> &_t,
                                         const Matrix<4, 4> &_tcp,
                                         const array<float, 6> &_pose) {
   return ikine(_t * _tcp.inv(), _pose);
+}
+
+Matrix<4, 4> Trajectory::ctraj(const Matrix<4, 4> _t0, const Matrix<4, 4> _t1,
+                               int &step, int total_step) {
+  Matrix<4, 4> target{};
+
+  const float t_val = static_cast<float>(step) / static_cast<float>(total_step);
+  if (step < total_step)
+    step++;
+
+  // Position interpolation
+  Eigen::Vector3f p0{Kinematic::t2p(_t0).getEigenMatrix()};
+  Eigen::Vector3f p1{Kinematic::t2p(_t1).getEigenMatrix()};
+  const auto pos = p0 + ((p1 - p0) * t_val);
+
+  target(0, 3) = pos.x();
+  target(1, 3) = pos.y();
+  target(2, 3) = pos.z();
+
+  // Posture interpolation
+  Eigen::Quaternionf q_start(Kinematic::t2r(_t0).getEigenMatrix());
+  Eigen::Quaternionf q_end(Kinematic::t2r(_t1).getEigenMatrix());
+
+  q_start.normalize();
+  q_end.normalize();
+
+  Eigen::Quaternionf q_interpolated = q_start.slerp(t_val, q_end);
+
+  auto rot = q_interpolated.toRotationMatrix();
+  target.eigen().block<3, 3>(0, 0) = rot;
+
+  return target;
 }

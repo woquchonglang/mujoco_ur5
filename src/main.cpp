@@ -10,9 +10,10 @@
 const char *model = "./lib/universal_robots_ur5e/scene.xml";
 
 // https://www.universal-robots.com/articles/ur/application-installation/dh-parameters-for-calculations-of-kinematics-and-dynamics/
-std::array<float, 6> theta = {0.0f, 0, 0, 0.0f, 0, 0.0f};
-std::array<float, 6> home = {0, -M_PI_2, M_PI_2, 0, M_PI_2, 0.0f};
+std::array<float, 6> theta = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+std::array<float, 6> home = {0.0, -M_PI_2, M_PI_2, 0, M_PI_2, 0.0f};
 std::array<float, 6> theta2 = {0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f};
+std::array<float, 6> theta3 = {0.1f, 0.1f, 0.1f, 0.1f, 0.1f, 0.1f};
 std::array<float, 6> a = {0.0f, -0.425, -0.3922, 0.f, 0.0f, 0.0f};
 std::array<float, 6> alpha = {M_PI_2, 0.0f, 0.0f, M_PI_2, -M_PI_2, 0.0f};
 std::array<float, 6> d_ = {0.1625f, 0.0f, 0.0f, 0.1333f, 0.0997f, 0.0996f};
@@ -24,8 +25,14 @@ Kinematic kinematic(mdh);
 std::array<float, 6> test_angles = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f};
 std::array<float, 3> xyz = {0.29f, -0.13f, -0.36f}; // 平移向量
 std::array<float, 3> rpy = {0.f, 0.f, 1.5f};        // 欧拉角 (roll, pitch, yaw)
-std::array<float, 6> pose = {-0.29f, -0.13f, -0.36f,
-                             0.f,    0.f,    1.5f}; // 初始末端位置 xyz,rpy
+std::array<float, 6> pose = {-0.492f, -0.133f, 0.488f,
+                             1.57f,   0.f,     -1.57f}; // 初始末端位置 xyz,rpy
+
+std::array<float, 6> pose1 = {-0.492f, 0.188f, 0.488f,
+                              1.57f,   0.f,    -1.57f}; // 初始末端位置 xyz,rpy
+
+std::array<float, 6> pose2 = {-0.492f, -0.35f, 0.488f,
+                              1.57f,   0.f,    -1.57f}; // 初始末端位置 xyz,rpy
 
 // MuJoCo data structures
 mjModel *m = NULL; // MuJoCo model
@@ -313,24 +320,6 @@ int main() {
   glfwSetScrollCallback(window, scroll);
 
   // user
-
-  // opt.frame = mjFRAME_BODY;
-
-  // mjuiDef defControl[] = {
-  //     {mjITEM_SECTION, "Control", mjPRESERVE, nullptr, "AJ"}, {mjITEM_END}};
-  // mjuiDef defSlider[] = {
-  //     {mjITEM_SLIDERNUM, "posSlider", 2, d->ctrl, "-3.14 3.14"},
-  //     {mjITEM_END}};
-  // for (int i = 0; i < 6; i++) {
-  //   defSlider[0].pdata = &d->ctrl[i];
-  //   std::sprintf(defSlider[0].name, "joint %d", i);
-  //   std::memcpy(defSlider[0].other, "-3.14 3.14", 11);
-  // }
-  // mjui_add(&ui, defControl);
-  // mjui_add(&ui, defSlider);
-  //
-  // UiModify(&ui, &ui_state, &con);
-
   int buf_width;
   int buf_height;
   glfwGetFramebufferSize(window, &buf_width, &buf_height);
@@ -399,31 +388,36 @@ int main() {
   std::println("roll:{},pitch:{},yaw:{},x:{},y:{},z:{}", fk.rpy.roll,
                fk.rpy.pitch, fk.rpy.yaw, fk.xyz.x, fk.xyz.y, fk.xyz.z);
 
-  // auto ik = kinematic.ikinePose({pose[0], pose[1], pose[2]},
-  //                               {pose[3], pose[4], pose[5]},
-  //                               *(std::array<float, 6> *)d->qpos);
-  // auto ik = kinematic.ikinePose({fk.xyz.x, fk.xyz.y, fk.xyz.z},
-  //                               {fk.rpy.roll, fk.rpy.pitch, fk.rpy.yaw},
-  //                               *(std::array<float, 6> *)m->qpos0);
-  auto fkt = kinematic.fkine2T(theta2);
-  auto ik = kinematic.ikine(fkt, theta2);
-
   auto fkpose = kinematic.fkine2pose(home);
-  auto ikpose = kinematic.ikinePose(
-      {fkpose.xyz.x, fkpose.xyz.y, fkpose.xyz.z},
-      {fkpose.rpy.roll, fkpose.rpy.pitch, fkpose.rpy.yaw}, theta2);
 
-  std::println("ik:{}", ik);
+  auto fkpose1 = kinematic.fkine2pose(theta3);
+  auto ikpose = kinematic.ikinePose(
+      {fkpose1.xyz.x, fkpose1.xyz.y, fkpose1.xyz.z},
+      {fkpose1.rpy.roll, fkpose1.rpy.pitch, fkpose1.rpy.yaw}, theta2);
+
+  // auto ikpose1 = kinematic.gradientDescentIK({fkpose1}, theta2);
+
+  std::println("fk:{},{},{},{},{},{}", fkpose.xyz.x, fkpose.xyz.y, fkpose.xyz.z,
+               fkpose.rpy.roll, fkpose.rpy.pitch, fkpose.rpy.yaw);
   std::println("ik:{}", ikpose);
+  // std::println("ik1:{}", ikpose1);
 
   for (int i = 0; i < 6; i++) {
     d->ctrl[i] = home[i];
   }
   pose = {fkpose.xyz.x,    fkpose.xyz.y,     fkpose.xyz.z,
           fkpose.rpy.roll, fkpose.rpy.pitch, fkpose.rpy.yaw};
+  std::println("pose: {}", pose);
 
   for (int i = 0; i < 6; i++)
     std::println("dpos:{}", d->qpos[i]);
+
+  int step = 0;
+
+  auto r1 = Kinematic::euler2Rotation({pose1[3], pose1[4], pose1[5]});
+  auto r2 = Kinematic::euler2Rotation({pose2[3], pose2[4], pose2[5]});
+
+  int count = 0;
 
   // run main loop, target real-time simulation and 60 fps rendering
   while (!glfwWindowShouldClose(window)) {
@@ -434,6 +428,54 @@ int main() {
     //  time to render.
     mjtNum simstart = d->time;
     while (d->time - simstart < 1.0 / 60.0) {
+      auto fkpose = kinematic.fkine2pose(*(std::array<float, 6> *)d->qpos);
+      pose = {fkpose.xyz.x,    fkpose.xyz.y,     fkpose.xyz.z,
+              fkpose.rpy.roll, fkpose.rpy.pitch, fkpose.rpy.yaw};
+      auto r0 = Kinematic::euler2Rotation({pose[3], pose[4], pose[5]});
+      if (fabsf(pose[0] - pose1[0]) < 0.01f && count == 0) {
+        count = 1;
+        auto now = std::chrono::steady_clock::now();
+      }
+      if (count == 1) {
+        auto t = Trajectory::ctraj(
+            Kinematic::rp2t(r2, {pose2[0], pose2[1], pose2[2]}),
+            Kinematic::rp2t(r1, {pose1[0], pose1[1], pose1[2]}), step, 1000);
+        std::array<float, 3> xyz = {Kinematic::t2p(t)(0, 0),
+                                    Kinematic::t2p(t)(1, 0),
+                                    Kinematic::t2p(t)(2, 0)};
+        auto rpy = Kinematic::rotation2euler(Kinematic::t2r(t));
+        auto ik =
+            kinematic.ikinePose(xyz, rpy, *(std::array<float, 6> *)d->qpos);
+        Joint del = pose - pose1;
+        if (Kinematic::absMax(del) < 0.012f) {
+          step = 0;
+          count = 2;
+        }
+
+        for (int i = 0; i < 6; i++) {
+          d->ctrl[i] = ik[i];
+        }
+      }
+      if (count == 2) {
+        auto t = Trajectory::ctraj(
+            Kinematic::rp2t(r1, {pose1[0], pose1[1], pose1[2]}),
+            Kinematic::rp2t(r2, {pose2[0], pose2[1], pose2[2]}), step, 1000);
+        std::array<float, 3> xyz = {Kinematic::t2p(t)(0, 0),
+                                    Kinematic::t2p(t)(1, 0),
+                                    Kinematic::t2p(t)(2, 0)};
+        auto rpy = Kinematic::rotation2euler(Kinematic::t2r(t));
+        auto ik =
+            kinematic.ikinePose(xyz, rpy, *(std::array<float, 6> *)d->qpos);
+        Joint del = pose - pose2;
+        if (Kinematic::absMax(del) < 0.02f) {
+          step = 0;
+          count = 1;
+        }
+
+        for (int i = 0; i < 6; i++) {
+          d->ctrl[i] = ik[i];
+        }
+      }
       mj_step(m, d);
     }
 
@@ -444,17 +486,6 @@ int main() {
     // update scene and render
     mjv_updateScene(m, d, &opt, NULL, &cam, mjCAT_ALL, &scn);
     mjr_render(viewport, &scn, &con);
-
-    // kinematic
-    // auto fkpose = kinematic.fkine2pose(*(std::array<float, 6> *)d->qpos);
-    // pose = {fkpose.xyz.x,    fkpose.xyz.y,     fkpose.xyz.z,
-    //         fkpose.rpy.roll, fkpose.rpy.pitch, fkpose.rpy.yaw};
-    const std::array<float, 3> cxyz = {pose[0], pose[1], pose[2]};
-    const std::array<float, 3> crpy = {pose[3], pose[4], pose[5]};
-    auto ik = kinematic.ikinePose(cxyz, crpy, *(std::array<float, 6> *)d->qpos);
-    for (int i = 0; i < 6; i++) {
-      d->ctrl[i] = ik[i];
-    }
 
     // ui
     UiModify(&ui, &ui_state, &con);

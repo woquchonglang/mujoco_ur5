@@ -41,6 +41,12 @@ struct XYZ_s {
 struct Pose_s {
   RPY_s rpy;
   XYZ_s xyz;
+  friend Pose_s operator-(const Pose_s &_p1, const Pose_s &_p2);
+};
+
+union Pose_u {
+  Pose_s pose;
+  std::array<float, 6> array;
 };
 
 class Kinematic {
